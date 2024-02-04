@@ -1,0 +1,5 @@
+transformers
+jsonlines
+tqdm
+spacy
+nltk
