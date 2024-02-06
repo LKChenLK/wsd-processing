@@ -1,7 +1,5 @@
 import jsonlines
-
 from tqdm import tqdm
-
 from gen_wsd import wsd
 
 test = [line for line in jsonlines.open("camb.test.sampled.jsonl")]
