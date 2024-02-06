@@ -1,18 +1,9 @@
-# import nltk
-# nltk.download('semcor')
-# nltk.download('wordnet')
 import os
 import csv
 import argparse
-from nltk.corpus import semcor
-from nltk.corpus import wordnet as wn
-from tqdm import tqdm
+import jsonlines
 from typing import List, Dict
 
-import jsonlines
-# import spacy
-
-# model_en = spacy.load('en_core_web_sm', disable=['parser', 'ner', 'textcat', 'custom'])
 
 INPUT_TEMPLATE = """\
 question: which description describes the word " {0} " best in the \
@@ -61,7 +52,7 @@ def format_prompt_input(
     return {"input": input_prompt, "definitions": definitions}
 
 
-def load_keys(input_file: os.PathLike) -> None:
+def load_keys(input_file: os.PathLike, add_gold_keys=False) -> None:
     data = []
     with open(input_file, "r", encoding="'iso-8859-1'") as f:
         reader = csv.reader(f, delimiter="\t")
@@ -92,7 +83,7 @@ def load_keys(input_file: os.PathLike) -> None:
                         "prompt": prompt,
                         "target_sense_idx": target_sense_idx, # 0-based. this helps us find the sense key of the target word, 
                         # which helps us find the corresponding definition
-                        "sense_key": sense_key, # ...just in case
+                        "sense_key": sense_key, # ...just in case `target_sense_idx` doesn't work, you can use this to find the correct sense with the sense_key in the gold key file
                         "target_id": target_id # this helps us find the gold key in the gold key file
                     }
                 )
@@ -122,13 +113,14 @@ def main(args):
 
     if 'semcor' not in dataset_name: # test data
         gold_keys = load_gold_keys(os.path.join(data_dir, 'gold_keys', f'{dataset_name}.gold.key.txt'))
+        # Do whatever's needed with the gold keys here
         file_path = os.path.join(data_dir, 'examples', f'{dataset_name}_test_token_cls.csv')
         data = load_keys(os.path.join(data_dir, 'examples', f'{dataset_name}_test_token_cls.csv'))
     else: # training data
         file_path = os.path.join(data_dir, 'examples', f'{dataset_name}_train_token_cls.csv')
         data = load_keys(os.path.join(data_dir, 'examples', f'{dataset_name}_train_token_cls.csv'))
     
-    with jsonlines.open(os.path.join(data_dir, dataset_name+".jsonl"), "w") as f:
+    with jsonlines.open(os.path.join(data_dir, 'examples', dataset_name+".jsonl"), "w") as f:
         f.write_all(data)
 
 if __name__ == "__main__":
