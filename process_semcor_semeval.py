@@ -83,6 +83,7 @@ def load_keys(input_file: os.PathLike, add_gold_keys=False) -> None:
                         "prompt": prompt,
                         "target_sense_idx": target_sense_idx, # 0-based. this helps us find the sense key of the target word, 
                         # which helps us find the corresponding definition
+                        "target_sense_num": target_sense_idx+1, 
                         "sense_key": sense_key, # ...just in case `target_sense_idx` doesn't work, you can use this to find the correct sense with the sense_key in the gold key file
                         "target_id": target_id # this helps us find the gold key in the gold key file
                     }
@@ -120,8 +121,10 @@ def main(args):
         file_path = os.path.join(data_dir, 'examples', f'{dataset_name}_train_token_cls.csv')
         data = load_keys(os.path.join(data_dir, 'examples', f'{dataset_name}_train_token_cls.csv'))
     
-    with jsonlines.open(os.path.join(data_dir, 'examples', dataset_name+".jsonl"), "w") as f:
+    out_name = os.path.join(data_dir, 'examples', dataset_name+".jsonl")
+    with jsonlines.open(out_name, "w") as f:
         f.write_all(data)
+    print(f"File saved in {out_name}!")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

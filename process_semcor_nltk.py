@@ -76,7 +76,6 @@ def get_semcor_from_nltk():
     for sent in tqdm(semcor.tagged_sents(tag="both")):
         sent_str = ' '.join([leaf for tok in sent for leaf in tok.leaves()])
         for tok in sent:
-            breakpoint()
             if type(tok.label()) != str and tok.label() is not None:
                 syn = tok.label().synset()
                 pos = tok[0].label()
@@ -85,10 +84,10 @@ def get_semcor_from_nltk():
                 all_defs = [_syn.definition() for _syn in wn.synsets(tok.label().name())]
 
                 # search index of target_def
-                target_sense_num = -1
+                target_sense_idx = -1
                 for i, d in enumerate(all_defs):
                     if d == syn.definition():
-                        target_sense_num = i
+                        target_sense_idx = i
                         break
 
                 examples = []
@@ -102,6 +101,8 @@ def get_semcor_from_nltk():
                     'word': word,
                     'synset': syn,
                     'target_def_index': target_def,
+                    "target_sense_idx": target_sense_idx,
+                    "target_sense_num": target_sense_idx+1,
                     'pos': pos,
                     'examples': examples,
                     'sent': sent_str
@@ -117,8 +118,10 @@ def get_semcor_from_nltk():
 if __name__=="__main__":
     out_dir = sys.argv[1]
     semcor_data = get_semcor_from_nltk()
-    with jsonlines.open(os.path.join(out_dir, 'semcor.jsonl'), 'w') as f:
-        f.write_all(semcor_data)
 
+    out_name = os.path.join(out_dir, 'semcor.jsonl')
+    with jsonlines.open(out_name, 'w') as f:
+        f.write_all(semcor_data)
+    print(f"Saved in {out_name}!")
 
 
