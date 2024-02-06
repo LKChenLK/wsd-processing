@@ -14,6 +14,8 @@ NOTE: if you want to evaluate your model on the benchmark, you'll want to downlo
 
 The second way (via loading SemCor from nltk directly) infers where the word is in a sentence by matching for the lemma of the target word in the target sentence. This is a more direct and simpler way, and you can mostly find the correct index, but if the same word appears in the context sentence more than once, there is possibility for mistake. 
 
+NOTE: the two methods stores the output file at the same place with the same name. If you want to try both and be able to distinguish them, you'll have to modify the code (`process_*.py`) and change the output directory or filename to distinguish them.
+
 ## Getting SemCor from GlossBERT's preprocessed dataset
 Download the preprocessed dataset in csv format from [google drive](https://drive.google.com/file/d/1OA-Ux6N517HrdiTDeGeIZp5xTq74Hucf/view)
 
@@ -72,4 +74,35 @@ Next, process the data:
 python process_semcor_nltk.py ./data/
 ```
 
+# Generate test data with the Cambridge data
+I'm assuming you already have `cambridge.word.888.json`. Make a copy of it in `./data/cambridge`.
+Then run
+```bash
+python gen_cambridge_test.py ./data/cambridge
+```
 
+You'll get `camb.test.jsonl` in `./data/cambridge/`
+If you intend to use the Cambridge dataset as training data, you can also sample from the processed data by uncommenting the final block of `gen_cambridge_test.py`.
+
+# Evaluate model trained with the above SemCor data
+This is mainly written for a T5 fine-tuned on SemCor in a format like so:
+```python
+INPUT_TEMPLATE = """\
+question: which description describes the word " <TARGET> " best in the \
+following context? descriptions:[  <SENSES> ] context: <CONTEXT>\
+"""
+```
+
+The model outputs a number, which is the index of the predicted definition. All the senses (definitions) filled in the template are numbered, thus you can find the text of the definition with the index. This is roughly how `evaluate_wsd.py` evaluates the model:
+1. Do WSD prediction with the finetuned model
+2. Map the output index to the definition and check if it is the same as that of the ground truth.
+3. Calculate accuracy.
+
+You should have a model somewhere. In `gen_wsd.py`, find the variable `MODEL_NAME` and put the path to the model there.
+To evaluate, run
+```bash
+python evaluate_wsd.py INPUT_FILE OUTPUT_FILE
+```
+
+`INPUT_FILE` should be a path to a `.jsonl` file in the format of the output from `gen_cambridge_test.py`. 
+`OUTPUT_FILE` is a path to a `.jsonl` file that contains the predicted definitions. The indices shouldbe aligned with the indices of the gold examples in the test file.
