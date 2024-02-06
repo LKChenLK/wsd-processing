@@ -1,35 +1,48 @@
+import sys
 import jsonlines
 from tqdm import tqdm
-from gen_wsd import wsd
-
-test = [line for line in jsonlines.open("camb.test.sampled.jsonl")]
-pred_defs, gold_defs = [], []
-corrects = {
-    "baseline": 0,
-    "model": 0
-}
+from .gen_wsd import wsd
 
 
-for line in tqdm(test):
-    pred_def, pred_indices = wsd(line)
-    pred = pred_indices[0]
-    gold = line["target_sense_num"]-1
 
-    pred_defs.append(pred)
-    gold_defs.append(gold)
+def evaluate(in_file, out_file):
+    test = [line for line in jsonlines.open(in_file)]
+    pred_defs, gold_defs = [], []
+    corrects = {
+        "baseline": 0,
+        "model": 0
+    }
 
-    if pred==gold:
-        corrects["model"] += 1
-    baseline = 0
+    out_defs = []
 
-    if baseline==gold:
-        corrects['baseline'] += 1
+    for line in tqdm(test):
+        pred_defs, pred_indices = wsd(line)
+        pred = pred_indices[0]
+        gold = line["target_sense_num"]-1
 
-print(f"Accuracy:\n" +
-      f"\tModel: {corrects['model']/len(test):.2%}\n" + 
-      f"\tBaseline: {corrects['baseline']/len(test):.2%}")
+        out_defs.append(pred)
+        gold_defs.append(gold)
+
+        if pred==gold:
+            corrects["model"] += 1
+        baseline = 0
+
+        if baseline==gold:
+            corrects['baseline'] += 1
+
+    res = f"Accuracy:\n" + \
+    f"\tModel: {corrects['model']/len(test):.2%}\n" + \
+    f"\tBaseline: {corrects['baseline']/len(test):.2%}"
+    
+    print(res)
+
+    with open(out_file+".txt", "w") as f:
+        f.write(res)
 
 
-with jsonlines.open("wsd.test.pred.jsonl", "w") as f:
-    f.write_all(pred_defs)
+    with jsonlines.open(out_file, "w") as f:
+        f.write_all(pred_defs)
 
+if __name__=="__main__":
+    in_file, out_file = sys.argv[1], sys.argv[2]
+    evaluate(in_file, out_file)

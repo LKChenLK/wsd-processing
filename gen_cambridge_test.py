@@ -2,7 +2,7 @@
 
 import random, string
 import json, jsonlines
-import os
+import os, sys
 import spacy
 from tqdm import tqdm
 from typing import Dict, List, Any
@@ -72,7 +72,7 @@ def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
         ]
     return {"input": input_prompt, "definitions": definitions}
 
-def make_data():
+def make_data(out_dir):
     # Load Cambridge Dict
     with open(os.path.join(DATA_FOLDER, FILE_CAM_DICT), "r") as f:
         cambridge_dict = json.load(f)
@@ -121,17 +121,17 @@ def make_data():
             else:
                 non_examples.append(lem)
     print(f"{len(examples)} examples saved ; {len(non_examples)} not used!")
-    with jsonlines.open("camb.test.jsonl", "w") as f:
+    with jsonlines.open(os.path.join(out_dir, "camb.test.jsonl"), "w") as f:
         f.write_all(examples)
 
 if __name__=="__main__":
     
-    make_data()
+    make_data(sys.argv[1])
 
-    data = [line for line in jsonlines.open("camb.test.jsonl")]
+    # data = [line for line in jsonlines.open("camb.test.jsonl")]
     
-    random.seed(42)
-    test = random.sample(data, int(len(data)/10))
-    with jsonlines.open("camb.test.sampled.jsonl", "w") as f:
-        f.write_all(test)
+    # random.seed(42)
+    # test = random.sample(data, int(len(data)/10))
+    # with jsonlines.open("camb.test.sampled.jsonl", "w") as f:
+    #     f.write_all(test)
     
