@@ -13,4 +13,4 @@ for d in "${eval_datasets[@]}"
         mv "./GlossBERT_datasets/Evaluation_Datasets/${d}/${d}_test_token_cls.csv" ./data/examples
         mv "./GlossBERT_datasets/Evaluation_Datasets/${d}/${d}.gold.key.txt" ./data/gold_keys
     done
-done
+
