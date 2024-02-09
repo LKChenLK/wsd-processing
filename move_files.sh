@@ -1,6 +1,7 @@
-unzip GlossBERT_datasets.zip
+mkdir GlossBERT_datasets
+unzip GlossBERT_datasets.zip -d GlossBERT_datasets
 
-mkdir data/examples data/gold_keys
+mkdir -p data/examples data/gold_keys
 
 mv ./GlossBERT_datasets/Training_Corpora/SemCor/semcor_train_token_cls.csv ./data/examples
 mv ./GlossBERT_datasets/Training_Corpora/SemCor/semcor.gold.key.txt ./data/gold_keys
