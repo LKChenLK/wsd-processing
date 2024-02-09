@@ -1,5 +1,6 @@
 transformers
 jsonlines
 tqdm
+scikit-learn
 spacy
 nltk
