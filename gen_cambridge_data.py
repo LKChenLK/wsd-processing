@@ -2,10 +2,12 @@
 
 import random, string
 import json, jsonlines
+import argparse
 import os, sys
 import spacy
 from tqdm import tqdm
 from typing import Dict, List, Any
+from sklearn.model_selection import train_test_split
 from .utils.sense_dicts import preprocess_definition
 
 INPUT_TEMPLATE = """\
@@ -14,10 +16,9 @@ following context? descriptions:[  " {1} ",  or " {2} " ] context: {3}\
 """
 
 BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-DATA_FOLDER = os.path.join(BASE_PATH, "data")
 # DATA_FOLDER = "/home/nlplab/kedy/NLP/AES/data"
 FILE_CAM_DICT = "cambridge.word.888.json"
-STOPWORDS_PATH = os.path.join(DATA_FOLDER, "stopwords.txt")
+STOPWORDS_PATH = os.path.join(BASE_PATH, "data", "stopwords.txt")
 STOPWORDS = set([line.strip() for line in open(STOPWORDS_PATH)])
 
 model_en = spacy.load('en_core_web_sm', disable=['parser', 'ner', 'textcat', 'custom'])
@@ -73,9 +74,9 @@ def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
         ]
     return {"input": input_prompt, "definitions": definitions}
 
-def make_data(out_dir):
+def make_data(camb_dir):
     # Load Cambridge Dict
-    with open(os.path.join(DATA_FOLDER, FILE_CAM_DICT), "r") as f:
+    with open(os.path.join(camb_dir, FILE_CAM_DICT), "r") as f:
         cambridge_dict = json.load(f)
 
     examples, non_examples = [], []
@@ -106,6 +107,7 @@ def make_data(out_dir):
                         if not ex:
                             continue
                         if ex[-1] not in string.punctuation:
+                            # only include full sentences as examples
                             continue
                         formatted_prompt_input = format_prompt_input(lem, ex, all_senses)
                         if formatted_prompt_input is not None:
@@ -115,18 +117,35 @@ def make_data(out_dir):
                                     "sent": ex,
                                     "lemma": lem,
                                     "target_sense_num": sense['target_sense_num'], # answer
+                                    "data-en_def": sense["data-en_def"], 
                                 }
                             )
                         else:
                             non_examples.append(sense)
             else:
                 non_examples.append(lem)
-    print(f"{len(examples)} examples saved ; {len(non_examples)} not used!")
-    with jsonlines.open(os.path.join(out_dir, "camb.test.jsonl"), "w") as f:
+    
+    out_path = os.path.join(camb_dir, "camb.prompts.jsonl")
+    with jsonlines.open(out_path, "w") as f:
         f.write_all(examples)
+    print(f"{len(examples)} examples of the entire {FILE_CAM_DICT} saved to {out_path}; {len(non_examples)} not used!")
+
+def split_dataset(dataset_path):
+    data = [line for line in jsonlines.open(dataset_path)]
+    x_all = [it['input'] for it in data]
+    y_all = [it['data-en_def'] for it in data]
+
+    x_train, x_test, y_train, y_test \
+        = train_test_split(x_all, y_all, test_size=0.2, random_state=42)
+
+    x_test, x_dev, y_test, y_dev \
+        = train_test_split(x_test, y_test, test_size=0.5, random_state=42) # 0.2 * 0.5 = 0.1
+    # We end up with a 80, 10, 10 split
+
 
 if __name__=="__main__":
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cambrigde_dict_dir", )
     make_data(sys.argv[1])
 
     # data = [line for line in jsonlines.open("camb.test.jsonl")]
