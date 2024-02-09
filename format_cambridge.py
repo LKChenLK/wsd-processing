@@ -46,9 +46,10 @@ def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
             out_sent = " ".join(out_sent)
             return out_sent
         except KeyError as ke:
+            print(f"Key error with word {target}: {ke}")
             return None
         except IndexError as ie:
-            print(f"Error with word {target}: {ie}")
+            print(f"Index error with word {target}: {ie}")
             return None
 
     for i, item in enumerate(definitions):
