@@ -138,7 +138,11 @@ def split_dataset(dataset_path, prompt_type):
     
     data = [line for line in jsonlines.open(dataset_path)]
     x_all = [it['input'] for it in data]
-    y_all = [it['data-en_def'] for it in data]
+    y_all = []
+    if prompt_type == "generative":
+        y_all = [it['data-en_def'] for it in data]
+    elif prompt_type=="multiple_choice":
+        y_all = [it['target_sense_num'] for it in data]
 
     x_train, x_test, y_train, y_test \
         = train_test_split(x_all, y_all, test_size=0.2, random_state=42)
