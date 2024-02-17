@@ -9,7 +9,7 @@ DATA_FOLDER = os.path.join(BASE_PATH, "data")
 FILE_CAM_DICT = "cambridge.word.888.json"
 
 # Load Cambridge Dict
-with open(os.path.join(DATA_FOLDER, FILE_CAM_DICT), "r") as f:
+with open(os.path.join(DATA_FOLDER, "cambridge", FILE_CAM_DICT), "r") as f:
     cambridge_dict = json.load(f)
 
 
