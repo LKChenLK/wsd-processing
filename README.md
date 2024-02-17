@@ -16,7 +16,7 @@ The second way (via loading SemCor from NLTK directly) infers where the word is 
 ⚠️ NOTE: the two methods stores the output file at the same place with the same name. If you want to try both and be able to distinguish them, you'll have to modify the code (`process_*.py`) and change the output directory or filename to distinguish them.
 
 ## Getting SemCor from GlossBERT's preprocessed dataset
-Download the preprocessed dataset in csv format from [google drive](https://drive.google.com/file/d/1OA-Ux6N517HrdiTDeGeIZp5xTq74Hucf/view)
+Download the preprocessed dataset in csv format from [google drive](https://drive.google.com/file/d/1OA-Ux6N517HrdiTDeGeIZp5xTq74Hucf/view) and put it in the root of this directory.
 
 For training, we only need files that end with `_train_token_cls.csv`.
 For evaluation, we need `*gold.key.txt`.
@@ -63,8 +63,7 @@ A jsonlines file is mainly easier to read and examine in a command line environm
 
 First, install the models and data required.
 ```bash
-python -m nltk.downloader wordnet
-python -m nltk.downloader semcor
+python -m nltk.downloader wordnet semcor
 python -m spacy download en_core_web_sm
 ```
 
@@ -77,7 +76,7 @@ python process_semcor_nltk.py ./data/
 I'm assuming you already have `cambridge.word.888.json`. Make a copy of it in `./data/cambridge`.
 Then run
 ```bash
-python gen_cambridge_test.py ./data/cambridge
+python gen_cambridge_data.py ./data/cambridge
 ```
 
 You'll get `camb.test.jsonl` in `./data/cambridge/`
