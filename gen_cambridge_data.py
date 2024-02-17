@@ -8,7 +8,7 @@ import spacy
 from tqdm import tqdm
 from typing import Dict, List, Any
 from sklearn.model_selection import train_test_split
-from .utils.sense_dicts import preprocess_definition
+from utils.sense_dicts import preprocess_definition
 
 INPUT_TEMPLATE = """\
 question: which description describes the word " {0} " best in the \
