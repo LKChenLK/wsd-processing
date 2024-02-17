@@ -3,7 +3,7 @@ from typing import List
 
 from utils.levels import cleanup_level
 
-BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 DATA_FOLDER = os.path.join(BASE_PATH, "data")
 # DATA_FOLDER = "/home/nlplab/kedy/NLP/AES/data"
 FILE_CAM_DICT = "cambridge.word.888.json"
