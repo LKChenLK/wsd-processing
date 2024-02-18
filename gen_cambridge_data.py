@@ -1,5 +1,7 @@
 #  This is the cleaned version of `gen_camb_test.py` for sharing
 
+import pdb, traceback
+import logging
 import random, string
 import json, jsonlines
 import argparse
@@ -9,6 +11,10 @@ from tqdm import tqdm
 from typing import Dict, List, Any
 from sklearn.model_selection import train_test_split
 from utils.sense_dicts import preprocess_definition
+
+logging.basicConfig(filename="gen_cambridge_data.log")
+logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler())
 
 INPUT_TEMPLATE = """\
 question: which description describes the word " {0} " best in the \
@@ -21,7 +27,7 @@ FILE_CAM_DICT = "cambridge.word.888.json"
 STOPWORDS_PATH = os.path.join(BASE_PATH, "data", "stopwords.txt")
 STOPWORDS = set([line.strip() for line in open(STOPWORDS_PATH)])
 
-model_en = spacy.load('en_core_web_sm', disable=['parser', 'ner', 'textcat', 'custom'])
+model_en = spacy.load('en_core_web_md', disable=['parser', 'ner', 'textcat', 'custom'])
 
 
 def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
@@ -35,23 +41,33 @@ def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
     def mark_target(sent: str, target: str) -> str:
         sent = model_en(sent)
         sent_info = {
-                word.lemma_: {"idx": word.i, "text": word.text,}
+                word.lemma_.lower(): {"idx": word.i, "text": word.text,}
                     for word in sent
                 }
-        try:
+        try: # unlemmatised target word
             lemma = target.lower()
             target_idx = sent_info[lemma]["idx"] # target.lower() should be the lemma
-            target_orig_form = sent_info[lemma]['text']
-            out_sent = [tok.text for tok in sent]
-            out_sent[target_idx] = f'" {target_orig_form} "'
-            out_sent = " ".join(out_sent)
-            return out_sent
         except KeyError as ke:
-            print(f"Key error with word {target}: {ke}")
-            return None
+            try: # lemmatise the target word too
+                target_words = model_en(target)
+                lemma = " ".join([w.lemma_ for w in target_words])
+                target_idx = sent_info[lemma]["idx"]
+            # Add another try-except:
+            # tokenize by white space and make sent_info again 
+            #   => don't lemmatize if "-" exists in target
+            #   => lemmatize + lower both context words and target word otherwise
+            except:
+                logging.warning(f"Key error with word '{target}': {sent_info.keys()}")
+                #breakpoint()
+                return None
         except IndexError as ie:
-            print(f"Index error with word {target}: {ie}")
+            logging.warning(f"Index error with word '{target}': {ie}")
             return None
+        target_orig_form = sent_info[lemma]['text']
+        out_sent = [tok.text for tok in sent]
+        out_sent[target_idx] = f'" {target_orig_form} "'
+        out_sent = " ".join(out_sent)
+        return out_sent
 
     for i, item in enumerate(definitions):
         # Probably because the model was fine-tuned using definition indices
@@ -109,6 +125,9 @@ def make_data(camb_dir):
                     if ex[-1] not in string.punctuation:
                         # only include full sentences as examples
                         continue
+                    if "-" in lem:
+                        non_examples.append(sense)
+                        continue
                     formatted_prompt_input = format_prompt_input(lem, ex, all_senses)
                     if formatted_prompt_input is not None:
                         examples.append(
@@ -123,10 +142,12 @@ def make_data(camb_dir):
                     else:
                         non_examples.append(sense)
     
+   
     out_path = os.path.join(camb_dir, "camb.prompts.jsonl")
     with jsonlines.open(out_path, "w") as f:
         f.write_all(examples)
-    print(f"{len(examples)} examples of the entire {FILE_CAM_DICT} saved to {out_path}; {len(non_examples)} not used!")
+    logging.info(f"{len(examples)} examples of the entire {FILE_CAM_DICT} saved to {out_path}; {len(non_examples)} not used!")
+    
 
 def split_dataset(dataset_path, prompt_type):
 
@@ -136,7 +157,7 @@ def split_dataset(dataset_path, prompt_type):
             out_data.append({"text": x_, "label": y_})
         return out_data
     
-    data = [line for line in jsonlines.open(dataset_path)]
+    data = [line for line in jsonlines.open(os.path.join(dataset_path, "camb.prompts.jsonl"))]
     x_all = [it['input'] for it in data]
     y_all = []
     if prompt_type == "generative":
@@ -164,19 +185,26 @@ def split_dataset(dataset_path, prompt_type):
     with jsonlines.open(os.path.join(dataset_path, f"{prompt_type}_test.jsonl"), "w") as f:
         f.write_all(test_out)
 
-    print(f"Split dataset saved to dataset_path/{prompt_type}_{{train,dev,test}}.jsonl")
+    logging.info(f"Split dataset saved to {dataset_path}/{prompt_type}_{{train,dev,test}}.jsonl")
 
 
-
-if __name__=="__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cambridge_dict_dir", default=f"{BASE_PATH}/data/cambridge")
     parser.add_argument("--prompt_type", choices=['generative', 'multiple_choice'], required=True)
-    parser.add_argument("--split", default=False)
+    parser.add_argument("--split", action='store_true')
     
     args = parser.parse_args()
     make_data(args.cambridge_dict_dir)
     if args.split:
         split_dataset(args.cambridge_dict_dir, args.prompt_type)
 
-    
+if __name__=="__main__":
+    # try:
+    #     main()
+    # except:
+    #     pass
+    #     extype, value, tb = sys.exc_info()
+    #     traceback.print_exc()
+    #     pdb.post_mortem(tb)
+    main()
