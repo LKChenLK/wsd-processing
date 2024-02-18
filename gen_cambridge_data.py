@@ -175,16 +175,18 @@ def split_dataset(dataset_path, prompt_type):
     dev_out = format_out(x_dev, y_dev)
     test_out = format_out(x_test, y_test)
 
-    with jsonlines.open(os.path.join(dataset_path, "train.jsonl"), "w") as f:
+    prompt_dataset_path = os.path.join(dataset_path, prompt_type)
+    os.makedirs(prompt_dataset_path, exist_ok=True)
+    with jsonlines.open(os.path.join(prompt_dataset_path, "train.jsonl"), "w") as f:
         f.write_all(train_out)
 
-    with jsonlines.open(os.path.join(dataset_path, "dev.jsonl"), "w") as f:
+    with jsonlines.open(os.path.join(prompt_dataset_path, "dev.jsonl"), "w") as f:
         f.write_all(dev_out)
 
-    with jsonlines.open(os.path.join(dataset_path, "test.jsonl"), "w") as f:
+    with jsonlines.open(os.path.join(prompt_dataset_path, "test.jsonl"), "w") as f:
         f.write_all(test_out)
 
-    logging.info(f"Split dataset saved to {dataset_path}/{{train,dev,test}}.jsonl")
+    logging.info(f"Split dataset saved to {prompt_dataset_path}/{{train,dev,test}}.jsonl")
 
 
 def main():
@@ -194,11 +196,9 @@ def main():
     parser.add_argument("--split", action='store_true')
     
     args = parser.parse_args()
-    dataset_path = os.path.join(args.cambridge_dict_dir, args.prompt_type)
-    os.makedirs(dataset_path, exist_ok=True)
-    make_data(dataset_path)
+    make_data(args.cambridge_dict_dir)
     if args.split:
-        split_dataset(dataset_path, args.prompt_type)
+        split_dataset(args.cambridge_dict_dir, args.prompt_type)
 
 if __name__=="__main__":
     # try:
