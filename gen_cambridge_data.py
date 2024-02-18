@@ -1,14 +1,13 @@
 #  This is the cleaned version of `gen_camb_test.py` for sharing
 
-import pdb, traceback
+#import pdb, traceback
 import logging
-import random, string
+import os, string
 import json, jsonlines
 import argparse
-import os, sys
 import spacy
 from tqdm import tqdm
-from typing import Dict, List, Any
+from typing import Dict, List
 from sklearn.model_selection import train_test_split
 from utils.sense_dicts import preprocess_definition
 
@@ -176,16 +175,16 @@ def split_dataset(dataset_path, prompt_type):
     dev_out = format_out(x_dev, y_dev)
     test_out = format_out(x_test, y_test)
 
-    with jsonlines.open(os.path.join(dataset_path, f"{prompt_type}_train.jsonl"), "w") as f:
+    with jsonlines.open(os.path.join(dataset_path, "train.jsonl"), "w") as f:
         f.write_all(train_out)
 
-    with jsonlines.open(os.path.join(dataset_path, f"{prompt_type}_dev.jsonl"), "w") as f:
+    with jsonlines.open(os.path.join(dataset_path, "dev.jsonl"), "w") as f:
         f.write_all(dev_out)
 
-    with jsonlines.open(os.path.join(dataset_path, f"{prompt_type}_test.jsonl"), "w") as f:
+    with jsonlines.open(os.path.join(dataset_path, "test.jsonl"), "w") as f:
         f.write_all(test_out)
 
-    logging.info(f"Split dataset saved to {dataset_path}/{prompt_type}_{{train,dev,test}}.jsonl")
+    logging.info(f"Split dataset saved to {dataset_path}/{{train,dev,test}}.jsonl")
 
 
 def main():
@@ -195,9 +194,11 @@ def main():
     parser.add_argument("--split", action='store_true')
     
     args = parser.parse_args()
-    make_data(args.cambridge_dict_dir)
+    dataset_path = os.path.join(args.cambridge_dict_dir, args.prompt_type)
+    os.makedirs(dataset_path, exist_ok=True)
+    make_data(dataset_path)
     if args.split:
-        split_dataset(args.cambridge_dict_dir, args.prompt_type)
+        split_dataset(dataset_path, args.prompt_type)
 
 if __name__=="__main__":
     # try:
