@@ -2,6 +2,7 @@
 
 #import pdb, traceback
 import logging
+import pandas as pd
 import os, string
 import json, jsonlines
 import argparse
@@ -28,7 +29,36 @@ STOPWORDS = set([line.strip() for line in open(STOPWORDS_PATH)])
 
 model_en = spacy.load('en_core_web_md', disable=['parser', 'ner', 'textcat', 'custom'])
 
+def deduplicate(examples, field):
+    """Brutte-force check for duplicates. 
+    TODO: accelerate by using simhash etc.
 
+    Args:
+        examples (List[Dict])
+        field (str): the field in each dict of examples that we want to check for duplicates
+    """
+    new_examples = []
+    duplicates = []
+    uniques = set()
+    
+    for ex in examples:
+        doc = ex[field]
+        if doc in uniques:
+            duplicates.append(doc)
+            continue
+        else:
+            uniques.add(doc)
+            new_examples.append(ex)
+    print(f"Original number of examples: {len(examples)}")
+    print(f"Number of duplicates: {len(duplicates)}")
+    print(f"Number of examples after dedupe: {len(new_examples)}")
+    return new_examples
+    
+
+def make_negative_examples():
+    # some words only have 1 sense. It might be possible to make more trianing data by making some negative examples for the word
+    raise NotImplementedError
+    
 def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
     """Turns token and its dictionary definitions + token's context sentence
     into input prompt for WSD model.
@@ -40,6 +70,7 @@ def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
     def mark_target(sent: str, target: str) -> str:
         sent = model_en(sent)
         sent_info = {
+
                 word.lemma_.lower(): {"idx": word.i, "text": word.text,}
                     for word in sent
                 }
@@ -94,7 +125,7 @@ def make_data(camb_dir):
     with open(os.path.join(camb_dir, FILE_CAM_DICT), "r") as f:
         cambridge_dict = json.load(f)
 
-    examples, non_examples = [], []
+    examples, non_examples, single_senses = [], [], []
     for lem in tqdm(cambridge_dict):
         if lem in STOPWORDS:
             continue
@@ -117,35 +148,41 @@ def make_data(camb_dir):
                         target_sense_num += 1
 
             # separate each example sent to be 1 dataset example
-            for sense in all_senses:
-                for ex in sense['example_sents']:
-                    if not ex:
-                        continue
-                    if ex[-1] not in string.punctuation:
-                        # only include full sentences as examples
-                        continue
-                    if "-" in lem:
-                        non_examples.append(sense)
-                        continue
-                    formatted_prompt_input = format_prompt_input(lem, ex, all_senses)
-                    if formatted_prompt_input is not None:
-                        examples.append(
-                            {
-                                **formatted_prompt_input, # input, all definitions
-                                "sent": ex,
-                                "lemma": lem,
-                                "target_sense_num": sense['target_sense_num'], # answer
-                                "data-en_def": sense["data-en_def"], 
-                            }
-                        )
-                    else:
-                        non_examples.append(sense)
+            if len(all_senses) > 1:
+                for sense in all_senses:
+                    for ex in sense['example_sents']:
+                        if not ex:
+                            continue
+                        if ex[-1] not in string.punctuation:
+                            # only include full sentences as examples
+                            non_examples.append_sense
+                            continue
+                        if "-" in lem:
+                            non_examples.append(sense)
+                            continue
+                        formatted_prompt_input = format_prompt_input(lem, ex, all_senses)
+                        if formatted_prompt_input is not None:
+                            examples.append(
+                                {
+                                    **formatted_prompt_input, # input, all definitions
+                                    "sent": ex,
+                                    "lemma": lem,
+                                    "target_sense_num": sense['target_sense_num'], # answer
+                                    "data-en_def": sense["data-en_def"], 
+                                }
+                            )
+                        else:
+                            non_examples.append(sense)
+            else:
+                single_senses.extend(all_senses)
     
-   
+    print(f"{len(non_examples)} examples not used because we cannot find a match in the context sentence")
+    print(f"{len(single_senses)} senses not used because they are the only sense for the lemma")
+    examples = deduplicate(examples, "input")
     out_path = os.path.join(camb_dir, "camb.prompts.jsonl")
     with jsonlines.open(out_path, "w") as f:
         f.write_all(examples)
-    logging.info(f"{len(examples)} examples of the entire {FILE_CAM_DICT} saved to {out_path}; {len(non_examples)} not used!")
+    logging.info(f"{len(examples)} examples of the entire {FILE_CAM_DICT} saved to {out_path}!")
     
 
 def split_dataset(dataset_path, prompt_type):

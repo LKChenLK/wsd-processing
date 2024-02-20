@@ -1,6 +1,5 @@
 import os
-import re
-from typing import Dict, List
+import argparse
 
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments
@@ -36,7 +35,7 @@ def tokenize_batch(batch):
                                 input_encoding.attention_mask
 
     # encode the targets, i.e. the corrected sentences
-    output_sequences = batch['corrected']
+    output_sequences = batch['label']
     target_encoding = tokenizer(
         output_sequences,
         padding="max_length",
@@ -60,11 +59,11 @@ def tokenize_batch(batch):
     #loss = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).loss
 
 
-def main():
+def main(args):
 
-    data_files = {'train': os.path.join('data', 'train.jsonl'),\
-                'validation': os.path.join('data', 'dev.jsonl'),\
-                #'test': os.path.join('data', 'test.jsonl')
+    data_files = {'train': os.path.join(args.dataset_path, 'train.jsonl'),\
+                'validation': os.path.join(args.dataset_path, 'dev.jsonl'),\
+                #'test': os.path.join(args.dataset_path, 'test.jsonl')
                 }
     dataset = load_dataset('json', data_files = data_files)
 
@@ -75,13 +74,15 @@ def main():
 
     OUTPUT_DIR = './model'
     LEARNING_RATE = 2e-5
-    BATCH_SIZE = 32
+    BATCH_SIZE = 8
     EPOCH = 5
     training_args = Seq2SeqTrainingArguments(
         output_dir = OUTPUT_DIR,
+        do_eval=True,
+        evaluation_strategy='epoch',
         learning_rate = LEARNING_RATE,
         per_device_train_batch_size = BATCH_SIZE,
-        per_device_eval_batch_size = BATCH_SIZE,
+        per_device_eval_batch_size = BATCH_SIZE*4,
         num_train_epochs = EPOCH,
         #remove_unused_columns=False
         # you can set more parameters here if you want
@@ -111,5 +112,9 @@ if __name__=="__main__":
     # forward pass
     # outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
     # last_hidden_states = outputs.last_hidden_state
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset_path", type=str, required=True)
 
-    main()
+    args = parser.parse_args()
+
+    main(args)
