@@ -72,12 +72,11 @@ def main(args):
         batched = True # Process in batches so it can be faster
         )
 
-    OUTPUT_DIR = './model'
     LEARNING_RATE = 2e-5
     BATCH_SIZE = 8
     EPOCH = 5
     training_args = Seq2SeqTrainingArguments(
-        output_dir = OUTPUT_DIR,
+        output_dir = args.model_dir,
         do_eval=True,
         evaluation_strategy='epoch',
         learning_rate = LEARNING_RATE,
@@ -87,6 +86,7 @@ def main(args):
         #remove_unused_columns=False
         # you can set more parameters here if you want
     )
+    training_args.set_logging(report_to=['wandb'])
 
     # now give all the information to a trainer
     trainer = Seq2SeqTrainer(
@@ -101,7 +101,7 @@ def main(args):
 
     trainer.train()
 
-    model.save_pretrained(os.path.join('model', 'finetuned'))
+    model.save_pretrained(args.model_dir)
 
 if __name__=="__main__":
     # input_ids = tokenizer(
@@ -114,6 +114,7 @@ if __name__=="__main__":
     # last_hidden_states = outputs.last_hidden_state
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, required=True)
+    parser.add_argument("--model_dir", type=str, required=True)
 
     args = parser.parse_args()
 
