@@ -18,7 +18,7 @@ model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
 def tokenize_batch(batch):
     """ Input: a batch of your dataset
         Example: { 'text': [['sentence1'], ['setence2'], ...],
-                   'corrected': ['correct_sentence1', 'correct_sentence2', ...] }
+                   (Optional)'labels': ['correct_sentence1', 'correct_sentence2', ...] }
     """
 
     # encode the source sentence, i.e. the grammatically-incorrect sentences
@@ -35,18 +35,20 @@ def tokenize_batch(batch):
                                 input_encoding.attention_mask
 
     # encode the targets, i.e. the corrected sentences
-    output_sequences = batch['label']
-    target_encoding = tokenizer(
-        output_sequences,
-        padding="max_length",
-        max_length=MODEL_MAX_LEN,
-        truncation=True,
-        return_tensors="pt",
-    )
-    labels = target_encoding.input_ids
+    labels = None
+    if 'label' in batch.keys():
+        output_sequences = batch['label']
+        target_encoding = tokenizer(
+            output_sequences,
+            padding="max_length",
+            max_length=MODEL_MAX_LEN,
+            truncation=True,
+            return_tensors="pt",
+        )
+        labels = target_encoding.input_ids
 
-    # replace padding token id's of the labels by -100 so it's ignored by the loss
-    labels[labels == tokenizer.pad_token_id] = -100
+        # replace padding token id's of the labels by -100 so it's ignored by the loss
+        labels[labels == tokenizer.pad_token_id] = -100
 
     ################################################
 
@@ -86,7 +88,7 @@ def main(args):
         #remove_unused_columns=False
         # you can set more parameters here if you want
     )
-    training_args.set_logging(report_to=['wandb'])
+    training_args.set_logging(report_to=['wandb']) # https://github.com/huggingface/transformers/issues/22429
 
     # now give all the information to a trainer
     trainer = Seq2SeqTrainer(
