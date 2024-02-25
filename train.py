@@ -18,7 +18,7 @@ model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
 def tokenize_batch(batch):
     """ Input: a batch of your dataset
         Example: { 'text': [['sentence1'], ['setence2'], ...],
-                   'corrected': ['correct_sentence1', 'correct_sentence2', ...] }
+                   (Optional)'labels': ['correct_sentence1', 'correct_sentence2', ...] }
     """
 
     # encode the source sentence, i.e. the grammatically-incorrect sentences
@@ -35,18 +35,20 @@ def tokenize_batch(batch):
                                 input_encoding.attention_mask
 
     # encode the targets, i.e. the corrected sentences
-    output_sequences = batch['label']
-    target_encoding = tokenizer(
-        output_sequences,
-        padding="max_length",
-        max_length=MODEL_MAX_LEN,
-        truncation=True,
-        return_tensors="pt",
-    )
-    labels = target_encoding.input_ids
+    labels = None
+    if 'label' in batch.keys():
+        output_sequences = batch['label']
+        target_encoding = tokenizer(
+            output_sequences,
+            padding="max_length",
+            max_length=MODEL_MAX_LEN,
+            truncation=True,
+            return_tensors="pt",
+        )
+        labels = target_encoding.input_ids
 
-    # replace padding token id's of the labels by -100 so it's ignored by the loss
-    labels[labels == tokenizer.pad_token_id] = -100
+        # replace padding token id's of the labels by -100 so it's ignored by the loss
+        labels[labels == tokenizer.pad_token_id] = -100
 
     ################################################
 
@@ -72,12 +74,11 @@ def main(args):
         batched = True # Process in batches so it can be faster
         )
 
-    OUTPUT_DIR = './model'
     LEARNING_RATE = 2e-5
     BATCH_SIZE = 8
     EPOCH = 5
     training_args = Seq2SeqTrainingArguments(
-        output_dir = OUTPUT_DIR,
+        output_dir = args.model_dir,
         do_eval=True,
         evaluation_strategy='epoch',
         learning_rate = LEARNING_RATE,
@@ -87,6 +88,7 @@ def main(args):
         #remove_unused_columns=False
         # you can set more parameters here if you want
     )
+    training_args.set_logging(report_to=['wandb']) # https://github.com/huggingface/transformers/issues/22429
 
     # now give all the information to a trainer
     trainer = Seq2SeqTrainer(
@@ -101,7 +103,7 @@ def main(args):
 
     trainer.train()
 
-    model.save_pretrained(os.path.join('model', 'finetuned'))
+    model.save_pretrained(args.model_dir)
 
 if __name__=="__main__":
     # input_ids = tokenizer(
@@ -114,6 +116,7 @@ if __name__=="__main__":
     # last_hidden_states = outputs.last_hidden_state
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, required=True)
+    parser.add_argument("--model_dir", type=str, required=True)
 
     args = parser.parse_args()
 
