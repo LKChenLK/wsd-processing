@@ -130,6 +130,20 @@ def make_data(camb_dir, prompt_type):
     with open(os.path.join(camb_dir, FILE_CAM_DICT), "r") as f:
         cambridge_dict = json.load(f)
 
+    def skip_example(ex, lem):
+        nonlocal non_examples
+        skip = False
+        if not len(ex):
+            return True
+        if ex[-1] not in string.punctuation:
+            # only include full sentences as examples
+            non_examples.append(sense)
+            return True
+        if "-" in lem:
+            non_examples.append(sense)
+            return True
+        return skip
+    
     examples, non_examples, single_senses = [], [], []
     for lem in tqdm(cambridge_dict):
         if lem in STOPWORDS:
@@ -156,14 +170,7 @@ def make_data(camb_dir, prompt_type):
             if len(all_senses) > 1:
                 for sense in all_senses:
                     for ex in sense['example_sents']:
-                        if not ex:
-                            continue
-                        if ex[-1] not in string.punctuation:
-                            # only include full sentences as examples
-                            non_examples.append_sense
-                            continue
-                        if "-" in lem:
-                            non_examples.append(sense)
+                        if skip_example(ex, lem):
                             continue
                         formatted_prompt_input = format_prompt_input(lem, ex, all_senses, prompt_type)
                         if formatted_prompt_input is not None:
@@ -179,12 +186,33 @@ def make_data(camb_dir, prompt_type):
                         else:
                             non_examples.append(sense)
             else:
-                single_senses.extend(all_senses)
+                if prompt_type == "generative" and len(all_senses): # only 1 sense
+                    sense = all_senses[0]
+                    for ex in sense['example_sents']:
+                        if skip_example(ex, lem):
+                            continue
+                        formatted_prompt_input = format_prompt_input(lem, ex, all_senses, prompt_type)
+                        if formatted_prompt_input is not None:
+                            examples.append(
+                                {
+                                    **formatted_prompt_input, # input, all definitions
+                                    "sent": ex,
+                                    "lemma": lem,
+                                    "target_sense_num": sense['target_sense_num'], # answer
+                                    "data-en_def": sense["data-en_def"], 
+                                }
+                            )
+                        else:
+                            non_examples.append(sense)
+                else:
+                    if len(all_senses):
+                        single_senses.extend(all_senses)
     
     print(f"{len(non_examples)} examples not used because we cannot find a match in the context sentence")
     print(f"{len(single_senses)} senses not used because they are the only sense for the lemma")
     examples = deduplicate(examples, "input")
-    out_path = os.path.join(camb_dir, "camb.prompts.jsonl")
+    out_dir = os.path.join(camb_dir, prompt_type)
+    out_path = os.path.join(out_dir, "camb.prompts.jsonl")
     with jsonlines.open(out_path, "w") as f:
         f.write_all(examples)
     logging.info(f"{len(examples)} examples of the entire {FILE_CAM_DICT} saved to {out_path}!")
@@ -240,7 +268,7 @@ def main():
     args = parser.parse_args()
     make_data(args.cambridge_dict_dir, args.prompt_type)
     if args.split:
-        split_dataset(args.cambridge_dict_dir, args.prompt_type)
+        split_dataset(os.path.join(args.cambridge_dict_dir, args.prompt_type), args.prompt_type)
 
 if __name__=="__main__":
     # try:
