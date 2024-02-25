@@ -11,15 +11,12 @@ from tqdm import tqdm
 from typing import Dict, List
 from sklearn.model_selection import train_test_split
 from utils.sense_dicts import preprocess_definition
+from utils.input_templates import TEMPLATES
 
 logging.basicConfig(filename="gen_cambridge_data.log")
 logging.getLogger().setLevel(logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
 
-INPUT_TEMPLATE = """\
-question: which description describes the word " {0} " best in the \
-following context? descriptions:[  " {1} ",  or " {2} " ] context: {3}\
-"""
 
 BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 # DATA_FOLDER = "/home/nlplab/kedy/NLP/AES/data"
@@ -59,7 +56,7 @@ def make_negative_examples():
     # some words only have 1 sense. It might be possible to make more trianing data by making some negative examples for the word
     raise NotImplementedError
     
-def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
+def format_prompt_input(word: str, sent: str, definitions: List, prompt_type: str) -> Dict:
     """Turns token and its dictionary definitions + token's context sentence
     into input prompt for WSD model.
     :param word: word to be disambiguated
@@ -107,12 +104,20 @@ def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
     context_sent = mark_target(sent, word)
     if context_sent is None:
         return None
-    input_prompt = INPUT_TEMPLATE.format(
-        word,
-        ' " , " '.join([item["numbered_def"] for item in definitions][:-1]),
-        [item["numbered_def"] for item in definitions][-1],  # "def1, ..., or def4"
-        context_sent,  # context
-    )
+    
+    INPUT_TEMPLATE = TEMPLATES[prompt_type]
+    if prompt_type == "generative":
+        input_prompt = INPUT_TEMPLATE.format(
+            word,
+            context_sent,  # context
+        )
+    elif prompt_type in ["multiple_choice", "generative_choices"]:
+        input_prompt = INPUT_TEMPLATE.format(
+            word,
+            ' " , " '.join([item["numbered_def"] for item in definitions][:-1]),
+            [item["numbered_def"] for item in definitions][-1],  # "def1, ..., or def4"
+            context_sent,  # context
+        )
 
     definitions = [
             {'data-en_def': item['data-en_def']}
@@ -120,7 +125,7 @@ def format_prompt_input(word: str, sent: str, definitions: List) -> Dict:
         ]
     return {"input": input_prompt, "definitions": definitions}
 
-def make_data(camb_dir):
+def make_data(camb_dir, prompt_type):
     # Load Cambridge Dict
     with open(os.path.join(camb_dir, FILE_CAM_DICT), "r") as f:
         cambridge_dict = json.load(f)
@@ -160,7 +165,7 @@ def make_data(camb_dir):
                         if "-" in lem:
                             non_examples.append(sense)
                             continue
-                        formatted_prompt_input = format_prompt_input(lem, ex, all_senses)
+                        formatted_prompt_input = format_prompt_input(lem, ex, all_senses, prompt_type)
                         if formatted_prompt_input is not None:
                             examples.append(
                                 {
@@ -196,7 +201,7 @@ def split_dataset(dataset_path, prompt_type):
     data = [line for line in jsonlines.open(os.path.join(dataset_path, "camb.prompts.jsonl"))]
     x_all = [it['input'] for it in data]
     y_all = []
-    if prompt_type == "generative":
+    if 'generative' in prompt_type:
         y_all = [it['data-en_def'] for it in data]
     elif prompt_type=="multiple_choice":
         y_all = [it['target_sense_num'] for it in data]
@@ -229,11 +234,11 @@ def split_dataset(dataset_path, prompt_type):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cambridge_dict_dir", default=f"{BASE_PATH}/data/cambridge")
-    parser.add_argument("--prompt_type", choices=['generative', 'multiple_choice'], required=True)
+    parser.add_argument("--prompt_type", choices=['generative', 'generative_choices', 'multiple_choice'], required=True)
     parser.add_argument("--split", action='store_true')
     
     args = parser.parse_args()
-    make_data(args.cambridge_dict_dir)
+    make_data(args.cambridge_dict_dir, args.prompt_type)
     if args.split:
         split_dataset(args.cambridge_dict_dir, args.prompt_type)
 
