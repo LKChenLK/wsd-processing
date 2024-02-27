@@ -29,8 +29,8 @@ def evaluate_generative(args):
     }
 
     data_files = {'test': args.test_path}
-    ft = Features({'text': Value('string')})
-    dataset = load_dataset('json', data_files = data_files, features=ft) # only load the 'text' column
+    dataset = load_dataset('json', data_files = data_files)
+    dataset.remove_columns(['label'])  # only load the 'text' column; don't waste compute on tokenising the labels
 
     dataset = dataset.map(
         tokenize_batch,    # your processing function
@@ -119,7 +119,7 @@ if __name__=="__main__":
     parser.add_argument("--model_dir", type=str, required=True)
     parser.add_argument("--test_path", type=str, required=True) # data/cambridge/test.jsonl
     parser.add_argument("--out_path", type=str, required=True)
-    parser.add_argument("--prompt_type", choices=['generative', 'multiple_choice'], required=True)
+    parser.add_argument("--prompt_type", choices=['generative', 'generative_choices', 'multiple_choice'], required=True)
 
     args = parser.parse_args()
 
