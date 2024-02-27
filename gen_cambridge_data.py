@@ -211,7 +211,8 @@ def make_data(camb_dir, prompt_type):
     print(f"{len(non_examples)} examples not used because we cannot find a match in the context sentence")
     print(f"{len(single_senses)} senses not used because they are the only sense for the lemma")
     examples = deduplicate(examples, "input")
-    out_dir = os.path.join(camb_dir, prompt_type)
+    out_dir = os.path.join(camb_dir, prompt_type) # data/cambridge/<prompt_type>
+    os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, "camb.prompts.jsonl")
     with jsonlines.open(out_path, "w") as f:
         f.write_all(examples)
@@ -245,8 +246,7 @@ def split_dataset(dataset_path, prompt_type):
     dev_out = format_out(x_dev, y_dev)
     test_out = format_out(x_test, y_test)
 
-    prompt_dataset_path = os.path.join(dataset_path, prompt_type)
-    os.makedirs(prompt_dataset_path, exist_ok=True)
+    prompt_dataset_path = os.path.join(dataset_path, prompt_type) # data/cambridge/<prompt_type>
     with jsonlines.open(os.path.join(prompt_dataset_path, "train.jsonl"), "w") as f:
         f.write_all(train_out)
 
@@ -268,7 +268,7 @@ def main():
     args = parser.parse_args()
     make_data(args.cambridge_dict_dir, args.prompt_type)
     if args.split:
-        split_dataset(os.path.join(args.cambridge_dict_dir, args.prompt_type), args.prompt_type)
+        split_dataset(args.cambridge_dict_dir, args.prompt_type)
 
 if __name__=="__main__":
     # try:
