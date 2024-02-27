@@ -227,7 +227,7 @@ def split_dataset(dataset_path, prompt_type):
             out_data.append({"text": x_, "label": y_})
         return out_data
     
-    data = [line for line in jsonlines.open(os.path.join(dataset_path, "camb.prompts.jsonl"))]
+    data = [line for line in jsonlines.open(os.path.join(dataset_path, prompt_type, "camb.prompts.jsonl"))]
     x_all = [it['input'] for it in data]
     y_all = []
     if 'generative' in prompt_type:
