@@ -49,6 +49,8 @@ def tokenize_batch(batch):
 
         # replace padding token id's of the labels by -100 so it's ignored by the loss
         labels[labels == tokenizer.pad_token_id] = -100
+    else:
+        print(f"WARNING: not tokenizing labels!!")
 
     ################################################
 

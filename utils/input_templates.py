@@ -4,8 +4,8 @@ following context? descriptions:[  " {1} ",  or " {2} " ] context: {3}\
 """
 
 GENERATIVE_INPUT_TEMPLATE = """\
-question: which description describes the word " {0} " best in the \
-following context? context: {1}\
+question: please explain the meaning of the word " {0} " in the \
+following context. context: {1}\
 """
 
 TEMPLATES = {
