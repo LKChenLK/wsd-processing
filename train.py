@@ -4,6 +4,9 @@ import argparse
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments
 from datasets import load_dataset
+import logging, sys
+from datetime import datetime
+import transformers.utils.logging as hf_logging
 
 BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 DATA_FOLDER = os.path.join(BASE_PATH, "data")
@@ -76,7 +79,7 @@ def main(args):
         batched = True # Process in batches so it can be faster
         )
 
-    LEARNING_RATE = 2e-5
+    LEARNING_RATE = 1e-4
     BATCH_SIZE = 8
     EPOCH = 5
     training_args = Seq2SeqTrainingArguments(
@@ -88,9 +91,9 @@ def main(args):
         per_device_eval_batch_size = BATCH_SIZE*4,
         num_train_epochs = EPOCH,
         #remove_unused_columns=False
-        # you can set more parameters here if you want
     )
     training_args.set_logging(report_to=['wandb']) # https://github.com/huggingface/transformers/issues/22429
+    training_args.set_lr_scheduler('constant')
 
     # now give all the information to a trainer
     trainer = Seq2SeqTrainer(
@@ -121,5 +124,19 @@ if __name__=="__main__":
     parser.add_argument("--model_dir", type=str, required=True)
 
     args = parser.parse_args()
+
+    now = datetime.now() # datetime object containing current date and time
+    dt_string = now.strftime("%d%m%Y-%H%M%S") # ddmmYY-HMS
+    logging.basicConfig(
+                    handlers=[
+                        logging.FileHandler(f"{args.model_dir}/{__name__}_{dt_string}.log", mode='a'),
+                        logging.StreamHandler(sys.stdout)
+                    ],
+                    #format='%(asctime)s.%(msecs)d [%(levelname)s] %(funcName)s - %(message)s' if DEBUG else ' %(message)s',
+                    format='%(funcName)s - %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    hf_logging.set_verbosity_info()
 
     main(args)
