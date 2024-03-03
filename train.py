@@ -8,14 +8,6 @@ import logging, sys
 from datetime import datetime
 import transformers.utils.logging as hf_logging
 
-BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-DATA_FOLDER = os.path.join(BASE_PATH, "data")
-
-MODEL_NAME = "t5-small"
-MODEL_MAX_LEN = 400 # max sent len (split by white space) in training set is 367
-
-tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME)
-model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
 
 # batch-tokenize inputs
 def tokenize_batch(batch):
@@ -82,6 +74,7 @@ def main(args):
     LEARNING_RATE = 1e-4
     BATCH_SIZE = 8
     EPOCH = 5
+    
     training_args = Seq2SeqTrainingArguments(
         output_dir = args.model_dir,
         do_eval=True,
@@ -122,9 +115,21 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, required=True)
     parser.add_argument("--model_dir", type=str, required=True)
+    parser.add_argument("--prompt_type", type=str, default="generative")
 
     args = parser.parse_args()
 
+    BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+    DATA_FOLDER = os.path.join(BASE_PATH, "data")
+
+    # max sent len (split by white space) in training set is 367 (multiple-choice); 72 (generative)
+    MODEL_MAX_LEN = 400 if "choice" in args.prompt_type else 100
+    MODEL_NAME = "t5-small"
+
+    tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME, max_length=MODEL_MAX_LEN)
+    model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME, max_length=MODEL_MAX_LEN)
+
+    
     now = datetime.now() # datetime object containing current date and time
     dt_string = now.strftime("%d%m%Y-%H%M%S") # ddmmYY-HMS
     logging.basicConfig(
