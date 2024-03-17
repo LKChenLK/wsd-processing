@@ -1,13 +1,14 @@
 import os
 import argparse
 
-from transformers import T5Tokenizer, T5ForConditionalGeneration
+from transformers import AutoTokenizer, T5ForConditionalGeneration
 from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments
 from datasets import load_dataset
 import logging, sys
 from datetime import datetime
 import transformers.utils.logging as hf_logging
 
+BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 # batch-tokenize inputs
 def tokenize_batch(batch):
@@ -80,10 +81,13 @@ def main(args):
         do_eval=True,
         evaluation_strategy='epoch',
         save_steps=1000,
-        learning_rate = LEARNING_RATE,
-        per_device_train_batch_size = BATCH_SIZE,
-        per_device_eval_batch_size = BATCH_SIZE*4,
-        num_train_epochs = EPOCH,
+        learning_rate = args.learning_rate,
+        per_device_train_batch_size = args.batch_size,
+        per_device_eval_batch_size = args.batch_size*4,
+        num_train_epochs = args.epochs,
+        warmup_steps=args.warmup_steps,
+        weight_decay=args.weight_decay,
+        lr_scheduler_type=args.lr_scheduler_type
         #remove_unused_columns=False
     )
 
@@ -106,24 +110,38 @@ def main(args):
     model.save_pretrained(args.model_dir)
 
 if __name__=="__main__":
-    
+
     parser = argparse.ArgumentParser()
+    parser.add_argument("--pretrained_model", type=str, required=True) # output model
     parser.add_argument("--dataset_path", type=str, required=True)
-    parser.add_argument("--model_dir", type=str, required=True)
-    parser.add_argument("--cont_train_model_dir", type=str, default=None)
-    parser.add_argument("--prompt_type", type=str, default="generative")
+    parser.add_argument("--model_dir", type=str, required=True) # output model
+    parser.add_argument("--cont_train_model_dir", type=str, default=None) # input model
+    parser.add_argument("--prompt_type", type=str, default="generative", choices=['generative', 'generative_choices', 'multiple_choice'])
+
+    # Training-specific args
+    parser.add_argument("--train_batch_size", type=int, default=16) # shrink to 8 if use any of the 'choice' prompts
+    parser.add_argument("--max_length", type=int, default=100) # expand to 400 of using 'choice' prompts
+    parser.add_argument("--do_eval", action="store_true")
+    parser.add_argument("--evaluation_strategy", type=str, default="epoch")
+    parser.add_argument("--save_steps", type=int, default=1000)
+    parser.add_argument("--learning_rate", type=float, required=True)
+    parser.add_argument("--epochs", type=int, default=6)
+
+
+    # Only GPT-2 changes these
+    parser.add_argument("--weight_decay", type=float, default=None)
+    parser.add_argument("--warmup_steps", type=int, default=None)
+    parser.add_argument("--lr_scheduler_type", type=str, default='linear')
 
     args = parser.parse_args()
 
-    BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-
     # max sent len (split by white space) in training set is 367 (multiple-choice); 72 (generative)
-    MODEL_MAX_LEN = 400 if "choice" in args.prompt_type else 100
-    MODEL_NAME = "t5-small"
+    MODEL_MAX_LEN = args.max_length
+    MODEL_NAME = args.pretrained_model
     if args.cont_train_model_dir:
         MODEL_NAME=args.cont_train_model_dir
 
-    tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME, max_length=MODEL_MAX_LEN)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, max_length=MODEL_MAX_LEN)
     model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME, max_length=MODEL_MAX_LEN)
 
     os.makedirs(args.model_dir, exist_ok=True)
