@@ -1,7 +1,6 @@
 import os
 import jsonlines
 from datasets import load_dataset
-from datasets import Features, Value
 import argparse
 from tqdm import tqdm
 from datetime import datetime
@@ -37,7 +36,7 @@ def evaluate_generative(args):
         batched = True # Process in batches so it can be faster
         )
     
-    print('Prediction...')
+    print('Predicting...')
     start = datetime.now()
     test = pipe(dataset['test']['text'], batch_size=64, clean_up_tokenization_spaces=True)
     print(f"Done predicting in {datetime.now()-start}s. Start Evaluating...")
@@ -58,7 +57,7 @@ def evaluate_generative(args):
     
     print(res)
 
-    res_path = "".join(args.out_path.split('.')[:-1])+".txt"
+    res_path = ".".join(args.out_path.split('.')[:-1])+".txt"
     with open(res_path, "w") as f:
         f.write(res)
 
