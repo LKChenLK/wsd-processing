@@ -30,7 +30,7 @@ def tokenize_batch(batch):
     input_ids, attention_mask = input_encoding.input_ids, \
                                 input_encoding.attention_mask
 
-    # encode the targets, i.e. the corrected sentences
+    # encode the targets, i.e. the definitions
     labels = None
     if 'label' in batch.keys():
         output_sequences = batch['label']
