@@ -1,7 +1,8 @@
-transformers
-jsonlines
-tqdm
-scikit-learn
-wandb
-spacy
-nltk
+datasets==2.17.0
+jsonlines==4.0.0
+nltk==3.8.1
+pandas==2.0.3
+scikit_learn==1.3.2
+spacy==3.7.2
+tqdm==4.66.1
+transformers==4.37.2
