@@ -1,7 +1,7 @@
 import os
 import argparse
 
-from transformers import AutoTokenizer, T5ForConditionalGeneration
+from transformers import AutoTokenizer
 from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments
 from datasets import load_dataset
 import logging, sys
@@ -30,7 +30,7 @@ def tokenize_batch(batch):
     input_ids, attention_mask = input_encoding.input_ids, \
                                 input_encoding.attention_mask
 
-    # encode the targets, i.e. the corrected sentences
+    # encode the targets, i.e. the definitions
     labels = None
     if 'label' in batch.keys():
         output_sequences = batch['label']
@@ -71,19 +71,14 @@ def main(args):
         tokenize_batch,    # your processing function
         batched = True # Process in batches so it can be faster
         )
-
-    LEARNING_RATE = 5e-4
-    BATCH_SIZE = 8 if "choice" in args.prompt_type else 16
-    EPOCH = 3
-    
     training_args = Seq2SeqTrainingArguments(
         output_dir = args.model_dir,
         do_eval=True,
         evaluation_strategy='epoch',
         save_steps=1000,
         learning_rate = args.learning_rate,
-        per_device_train_batch_size = args.batch_size,
-        per_device_eval_batch_size = args.batch_size*4,
+        per_device_train_batch_size = args.train_batch_size,
+        per_device_eval_batch_size = args.train_batch_size*4,
         num_train_epochs = args.epochs,
         warmup_steps=args.warmup_steps,
         weight_decay=args.weight_decay,
@@ -129,8 +124,8 @@ if __name__=="__main__":
 
 
     # Only GPT-2 changes these
-    parser.add_argument("--weight_decay", type=float, default=None)
-    parser.add_argument("--warmup_steps", type=int, default=None)
+    parser.add_argument("--weight_decay", type=float, default=0.0)
+    parser.add_argument("--warmup_steps", type=int, default=0)
     parser.add_argument("--lr_scheduler_type", type=str, default='linear')
 
     args = parser.parse_args()
@@ -142,7 +137,15 @@ if __name__=="__main__":
         MODEL_NAME=args.cont_train_model_dir
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, max_length=MODEL_MAX_LEN)
-    model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME, max_length=MODEL_MAX_LEN)
+    
+    model = None
+    if "t5" in MODEL_NAME:
+        from transformers import T5ForConditionalGeneration
+        model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME, max_length=MODEL_MAX_LEN)
+    elif "gpt2" in MODEL_NAME:
+        from transformers import AutoModelForCausalLM
+        tokenizer.pad_token = tokenizer.eos_token
+        model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, max_length=MODEL_MAX_LEN)
 
     os.makedirs(args.model_dir, exist_ok=True)
     now = datetime.now() # datetime object containing current date and time
