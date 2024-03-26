@@ -1,4 +1,12 @@
 
+
+WORK_DIR="/home/nlplab/$(whoami)/wsd-processing/"
+
+# activate virtual env
+source ${WORK_DIR}/env/bin/activate
+
+set -ex
+
 # for loading the tokeniser
 PRETRAINED_MODEL="t5-small"
 
@@ -6,11 +14,11 @@ PRETRAINED_MODEL="t5-small"
 CONT_DIR=".../checkpoint-XXXX"
 
 # SAVE continue-trained model here
-MODEL_DIR=...
+MODEL_DIR="${WORK_DIR}/model/..."
 
-python train.py \
+python "${WORK_DIR}/train.py" \
     --pretrained_model ${PRETRAINED_MODEL} \
-    --dataset_path ./data/cambridge/generative \
+    --dataset_path "${WORK_DIR}/data/cambridge/generative" \
     --model_dir ${MODEL_DIR} \
     --prompt_type generative \
     --train_batch_size 16 \
@@ -21,3 +29,5 @@ python train.py \
     --learning_rate 0.001 \
     --epochs 6 \
     --cont_train_model_dir ${CONT_DIR}
+
+set +ex

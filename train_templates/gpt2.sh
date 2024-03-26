@@ -1,3 +1,4 @@
+#!/bin/sh
 
 WORK_DIR="/home/nlplab/$(whoami)/wsd-processing/"
 
@@ -6,8 +7,9 @@ source ${WORK_DIR}/env/bin/activate
 
 set -ex
 
-MODEL_DIR="${WORK_DIR}/model/..."
-PRETRAINED_MODEL=t5-small
+MODEL_DIR="${WORK_DIR}/model/gpt2"
+PRETRAINED_MODEL="gpt2"
+CUDA_VISIBLE_DEVICES=0,1
 
 python "${WORK_DIR}/train.py" \
     --pretrained_model ${PRETRAINED_MODEL} \
@@ -18,8 +20,11 @@ python "${WORK_DIR}/train.py" \
     --max_length 100 \
     --do_eval \
     --evaluation_strategy epoch \
-    --save_steps 1000 \
-    --learning_rate 0.001 \
-    --epochs 6
+    --save_steps 2000 \
+    --learning_rate 0.0001 \
+    --epochs 4 \
+    --weight_decay 0.1 \
+    --warmup_steps 1000 \
+    --lr_scheduler_type cosine
 
 set +ex
