@@ -1,33 +1,26 @@
-{
-    "training_args": {
-        "train_batch_size": 16,
-        "max_length": 100,
-        "do_eval": true,
-        "evaluation_strategy": "epoch",
-        "save_steps": 1000,
-        "learning_rate": 1e-3,
-        "epochs": 5
-    },
-    "prompt_type": "generative",
-    "dataset_path": "data/cambridge/generative",
-    "model_name": "t5-small",
-    "cont_train_model_dir": ""
-}
 
+
+
+WORK_DIR="/home/nlplab/$(whoami)/wsd-processing/"
+
+# activate virtual env
+source ${WORK_DIR}/env/bin/activate
+
+set -ex
 
 # for loading the tokeniser
 PRETRAINED_MODEL="t5-small"
 
-# <model_dir>/checkpoint-XXXX ; load model from here.
+# <model_dir>/checkpoint-XXXX ; LOAD model from here.
 CONT_DIR=".../checkpoint-XXXX"
 
-# save continue-trained model here
-MODEL_DIR=...
+# SAVE continue-trained model here
+MODEL_DIR="${WORK_DIR}/model/..."
 
-python train.py \
-    --pretrained_model $PRETRAINED_MODEL \
-    --dataset_path ./data/cambridge/generative \
-    --model_dir $MODEL_DIR \
+python "${WORK_DIR}/train.py" \
+    --pretrained_model ${PRETRAINED_MODEL} \
+    --dataset_path "${WORK_DIR}/data/cambridge/generative" \
+    --model_dir ${MODEL_DIR} \
     --prompt_type generative \
     --train_batch_size 16 \
     --max_length 100 \
@@ -36,4 +29,6 @@ python train.py \
     --save_steps 1000 \
     --learning_rate 0.001 \
     --epochs 6 \
-    --cont_train_model_dir
+    --cont_train_model_dir ${CONT_DIR}
+
+set +ex
