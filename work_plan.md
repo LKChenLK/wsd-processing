@@ -1,0 +1,7 @@
+- Data pre-processing
+        - [ ]SemCor
+        - [ ] Cambridge
+- Training
+- Evaluation
+    - Post-processing
+    - Inference script

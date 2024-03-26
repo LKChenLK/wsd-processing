@@ -1,5 +1,6 @@
 env/
 
+*.log
 *.jsonl
 *.csv
 *.pdf
