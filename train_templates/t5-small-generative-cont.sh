@@ -1,6 +1,5 @@
 
 
-
 WORK_DIR="/home/nlplab/$(whoami)/wsd-processing/"
 
 # activate virtual env
@@ -21,7 +20,6 @@ python "${WORK_DIR}/train.py" \
     --pretrained_model ${PRETRAINED_MODEL} \
     --dataset_path "${WORK_DIR}/data/cambridge/generative" \
     --model_dir ${MODEL_DIR} \
-    --prompt_type generative \
     --train_batch_size 16 \
     --max_length 100 \
     --do_eval \
