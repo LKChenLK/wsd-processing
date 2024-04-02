@@ -111,7 +111,6 @@ if __name__=="__main__":
     parser.add_argument("--dataset_path", type=str, required=True)
     parser.add_argument("--model_dir", type=str, required=True) # output model
     parser.add_argument("--cont_train_model_dir", type=str, default=None) # input model
-    parser.add_argument("--prompt_type", type=str, default="generative", choices=['generative', 'generative_choices', 'multiple_choice'])
 
     # Training-specific args
     parser.add_argument("--train_batch_size", type=int, default=16) # shrink to 8 if use any of the 'choice' prompts
